@@ -31,11 +31,22 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
     private final int k;
     private final int kTarget;
 
+    private class KMGauge implements Gauge<Iterable<Element>> {
+        @Override
+        public Iterable<Element> getValue() {
+            try {
+                return centroids.get();
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.out.println("Exception occurred in gauge!");
+            }
+            return new LinkedList<Element>();
+        }
+    }
+
+    private KMGauge gauge;
+
     public Integer map(Tuple2<Integer, Element> tuple) {
-        
-        this.counter.inc();
-        
-        
         Element element = tuple.f1;
         long cur = 0;
         try {
@@ -211,11 +222,10 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
         }
     }
 
-    private Counter counter;
     public void open(Configuration config) {
-        this.counter = getRuntimeContext()
+        this.gauge = getRuntimeContext()
             .getMetricGroup()
-            .counter("km");
+            .gauge("km", new KMGauge());
 
         this.centroids = getRuntimeContext()
             .getListState(new ListStateDescriptor<>
