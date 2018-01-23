@@ -6,11 +6,18 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.Arrays;
 
 public class Element {
     private double features[];
     public final int size;
     public final int length;
+
+    @Override
+    public String toString() {
+        return Arrays.toString(features);
+    }
+
     public Element(double[] array) {
         this.size = array.length;
         this.length = array.length;
