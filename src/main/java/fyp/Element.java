@@ -99,6 +99,13 @@ public class Element {
         }
         return new Element(temp);
     }
+    public Element scale(double sc) {
+        double temp[] = new double[this.size];
+        for (int i = 0; i < this.size; i++) {
+            temp[i] = this.features[i] * sc;
+        }
+        return new Element(temp);
+    }
     public double distance(Element that) {
         Element temp = this.subtract(that);
         double ans = 0;
