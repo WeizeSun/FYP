@@ -17,6 +17,7 @@ public class Query {
 
     private static int k;
     private static int maxIter = 100;
+    private static double threshold = 10.0;
 
     private static Collection<Element> 
         kmeans(Collection<Element> elements) {
@@ -25,10 +26,11 @@ public class Query {
         Element[] elems 
             = elements.toArray(new Element[elements.size()]);
         for (int i = 0; i < centroids.length; i++) {
-            centroids[i] = elems[i * centroids.length / k];
+            centroids[i] = elems[i * centroids.length / (k + 1)];
         }
         int[] cluster = new int[elements.size()];
         for (int iter = 0; iter < maxIter; iter++) {
+            double change = 0.0;
             for (int i = 0; i < elems.length; i++) {
                 double gm = Double.POSITIVE_INFINITY;
                 int clu = 0;
@@ -43,7 +45,7 @@ public class Query {
             }
 
             for (int i = 0; i < centroids.length; i++) {
-                double[] init = new double[k];
+                double[] init = new double[centroids[0].size];
                 Arrays.fill(init, 0.0);
                 Element sum = new Element(init);
                 int cnt = 0;
@@ -53,7 +55,11 @@ public class Query {
                         cnt++;
                     }
                 }
-                centroids[i] = sum.scale(1.0 / cnt);
+                if (cnt != 0) {
+                    Element newCentroid = sum.scale(1.0 / cnt);
+                    change += newCentroid.distance(centroids[i]);
+                    centroids[i] = newCentroid;
+                }
             }
         }
         return Arrays.asList(centroids);
@@ -75,10 +81,10 @@ public class Query {
                         features[i] = 
                             Double.parseDouble(rawFeatures[i].trim());
                     }
-                    System.out.println(new Element(features));
                     elements.add(new Element(features));
                 }
                 Collection<Element> centroids = kmeans(elements);
+                System.out.println("=======Centroids=======");
                 for (Element elem: centroids) {
                     System.out.println(elem);
                 }
