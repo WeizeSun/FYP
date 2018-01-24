@@ -10,7 +10,7 @@ public class Test {
     public static void main(String[] args) throws Exception {
         final StreamExecutionEnvironment env 
             = StreamExecutionEnvironment.getExecutionEnvironment();
-
+        /*
         env.enableCheckpointing(30000);
         env.getCheckpointConfig()
             .setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE);
@@ -22,8 +22,9 @@ public class Test {
             .enableExternalizedCheckpoints(CheckpointConfig
                     .ExternalizedCheckpointCleanup
                     .RETAIN_ON_CANCELLATION);
+        */
         DataStream<String> source 
-            = env.readTextFile("/home/weizesun/3d.txt").uid("kmean");
+            = env.readTextFile("/home/weizesun/a2.txt").uid("kmean");
         DataStream<Tuple2<Integer, Element>> parsed 
             = source.map(new Preprocess()).keyBy(0);
         DataStream<Integer> result 
