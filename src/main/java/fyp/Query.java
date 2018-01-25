@@ -28,14 +28,14 @@ public class Query {
         for (int i = 0; i < centroids.length; i++) {
             centroids[i] = elems[i * centroids.length / (k + 1)];
         }
-        int[] cluster = new int[elements.size()];
+        int[] cluster = new int[elems.length];
         for (int iter = 0; iter < maxIter; iter++) {
             double change = 0.0;
             for (int i = 0; i < elems.length; i++) {
                 double gm = Double.POSITIVE_INFINITY;
                 int clu = 0;
                 for (int j = 0; j < centroids.length; j++) {
-                    double temp = elems[i].distance(centroids[i]);
+                    double temp = elems[i].distance(centroids[j]);
                     if (temp < gm) {
                         clu = j;
                         gm = temp;
@@ -43,7 +43,6 @@ public class Query {
                 }
                 cluster[i] = clu;
             }
-
             for (int i = 0; i < centroids.length; i++) {
                 double[] init = new double[centroids[0].size];
                 Arrays.fill(init, 0.0);
@@ -99,7 +98,7 @@ public class Query {
         }
         TailerListener listener = new KMListener();
         Tailer tailer = new Tailer(
-                new File("/home/weizesun/fuck.log"), listener, 500);
+                new File("/home/weizesun/km.log"), listener, 500);
         tailer.run();
     }
 }
