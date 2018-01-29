@@ -10,26 +10,12 @@ public class Test {
     public static void main(String[] args) throws Exception {
         final StreamExecutionEnvironment env 
             = StreamExecutionEnvironment.getExecutionEnvironment();
-        /*
-        env.enableCheckpointing(30000);
-        env.getCheckpointConfig()
-            .setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE);
-        env.getCheckpointConfig().setMinPauseBetweenCheckpoints(10000);
-        env.getCheckpointConfig().setCheckpointTimeout(10000);
-        env.getCheckpointConfig().setMaxConcurrentCheckpoints(1);
-
-        env.getCheckpointConfig()
-            .enableExternalizedCheckpoints(CheckpointConfig
-                    .ExternalizedCheckpointCleanup
-                    .RETAIN_ON_CANCELLATION);
-        */
         DataStream<String> source 
             = env.readTextFile("/home/weizesun/a2.txt").uid("kmean");
         DataStream<Tuple2<Integer, Element>> parsed 
             = source.map(new Preprocess()).keyBy(0);
         DataStream<Integer> result 
             = parsed.map(new StreamingKmeans(50)).setParallelism(2);
-        // result.print();
         result.writeAsText("/home/weizesun/result.txt");
         env.execute("Test");
     }
