@@ -6,6 +6,8 @@ import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
+import org.apache.flink.api.common.state.MapState;
+import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -16,6 +18,8 @@ import java.util.PriorityQueue;
 import java.util.LinkedList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.Map.Entry;
 
 import java.io.IOException;
 
@@ -26,21 +30,24 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
     private ValueState<Double> f;
     private ValueState<Long> count;
     private ValueState<Long> q;
+    private MapState<Long, AtomicLong> filter;
 
     private final Random rand = new Random();
     private final int k;
     private final int kTarget;
 
-    private class KMGauge implements Gauge<Iterable<Element>> {
+    private class KMGauge implements Gauge<CentroidAndCount> {
         @Override
-        public Iterable<Element> getValue() {
+        public CentroidAndCount getValue() {
             try {
-                return centroids.get();
+                return new CentroidAndCount(centroids.get()
+                        , filter.entries());
             } catch (Exception e) {
                 e.printStackTrace();
                 System.out.println("Exception occurred in gauge!");
             }
-            return new LinkedList<Element>();
+            return new CentroidAndCount(new LinkedList<Element>(), 
+                    new LinkedList<Entry<Long, AtomicLong>>());
         }
     }
 
@@ -230,6 +237,13 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
         this.centroids = getRuntimeContext()
             .getListState(new ListStateDescriptor<>
                     ("centroids", Element.class));
+
+        MapStateDescriptor<Long, AtomicLong> filterDescriptor 
+            = new MapStateDescriptor<>(
+                    "filter",
+                    TypeInformation.of(new TypeHint<Long>() {}),
+                    TypeInformation.of(new TypeHint<AtomicLong>() {}));
+        this.filter = getRuntimeContext().getMapState(filterDescriptor);
 
         ValueStateDescriptor<Long> countDescriptor 
             = new ValueStateDescriptor<>(
