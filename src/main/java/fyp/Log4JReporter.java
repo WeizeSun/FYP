@@ -12,31 +12,34 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map.Entry;
 import java.util.HashMap;
+import java.util.LinkedList;
+
+import java.util.concurrent.atomic.AtomicLong;
 
 public class Log4JReporter implements MetricReporter, Scheduled {
     private final static Logger log 
         = LoggerFactory.getLogger(Log4JReporter.class);
-    private final HashMap<Gauge<Iterable<Element>>, String> gauges 
-        = new HashMap<Gauge<Iterable<Element>>, String>();
+    private final HashMap<Gauge<?>, String> gauges 
+        = new HashMap();
 
     @Override
     public void open(MetricConfig metricconfig) {
-        
+
     }
 
     @Override
     public void close() {
-        
+
     }
 
     @Override
     public void notifyOfAddedMetric(Metric metric, 
             String metricName, MetricGroup group) {
         String name = group.getMetricIdentifier(metricName);
-        
+
         synchronized(this) {
-            if (metric instanceof Gauge) {
-                gauges.put((Gauge)metric, name);
+            if (metric instanceof Gauge<?>) {
+                gauges.put((Gauge<?>)metric, name);
             }
         }
     }
@@ -45,7 +48,7 @@ public class Log4JReporter implements MetricReporter, Scheduled {
     public void notifyOfRemovedMetric(Metric metric,
             String metricName, MetricGroup group) {
         synchronized(this) {
-            if (metric instanceof Gauge) {
+            if (metric instanceof Gauge<?>) {
                 gauges.remove(metric);
             }
         }
@@ -53,13 +56,12 @@ public class Log4JReporter implements MetricReporter, Scheduled {
 
     @Override
     public void report() {
-        log.info("Starting Metric Report, Time = {}",
+        log.info("#######Starting Metric Report, Time = {}#######",
                 System.currentTimeMillis());
-        for (Entry<Gauge<Iterable<Element>>, String> entry: 
-                gauges.entrySet()) {
-            for (Element elem: entry.getKey().getValue()) {
-                log.info("{}", elem);
-            }
+        for (Entry<Gauge<?>, String> entry: gauges.entrySet()) {
+            log.info("{}: {}", entry.getValue(), 
+                    entry.getKey().getValue().toString());
         }
+        log.info("#######Finished Metric Report#######");
     }
 }

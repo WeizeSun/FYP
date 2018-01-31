@@ -69,7 +69,7 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
             }
 
             try {
-                filter.put(cur, new AtomicLong());
+                filter.put(cur, new AtomicLong(1));
                 centroids.add(element);
             } catch (Exception e) {
                 e.printStackTrace();
@@ -117,7 +117,7 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
 
             try {
                 centroids.add(element);
-                filter.put(cur, new AtomicLong());
+                filter.put(cur, new AtomicLong(1));
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -148,7 +148,7 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
             if (rand.nextDouble() <= p) {
                 try {
                     centroids.add(element);
-                    filter.put(size, new AtomicLong());
+                    filter.put(size, new AtomicLong(1));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -193,7 +193,8 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
                     }
                     pos++;
                 }
-                filter.get((long)pos).incrementAndGet();
+                // filter.get((long)pos).incrementAndGet();
+                filter.get((long)pos).set(333);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -204,7 +205,7 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
     public void open(Configuration config) {
         this.gauge = getRuntimeContext()
             .getMetricGroup()
-            .gauge("km", new KMGauge());
+            .gauge("kms", new KMGauge());
 
         this.centroids = getRuntimeContext()
             .getListState(new ListStateDescriptor<>

@@ -2,6 +2,7 @@ package fyp;
 
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.Iterator;
 
 public class CentroidAndCount {
     private Iterable<Element> centroids;
@@ -19,5 +20,14 @@ public class CentroidAndCount {
 
     public Iterable<Entry<Long, AtomicLong>> getCounts() {
         return this.counts;
+    }
+
+    @Override
+    public String toString() {
+        String ans = "";
+        for (Entry<Long, AtomicLong> elem: counts) {
+            ans += elem.getKey() + "," + elem.getValue().get() + ";";
+        }
+        return ans;
     }
 }
