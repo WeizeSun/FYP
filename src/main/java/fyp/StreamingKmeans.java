@@ -44,7 +44,6 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
                         , filter.entries());
             } catch (Exception e) {
                 e.printStackTrace();
-                System.out.println("Exception occurred in gauge!");
             }
             return new CentroidAndCount(new LinkedList<Element>(), 
                     new LinkedList<Entry<Long, AtomicLong>>());
@@ -59,26 +58,21 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
         try {
             cur = count.value();
         } catch (IOException e) {
-            System.out.println("Caught IOException in " 
-                    + "StreamingKmeans.map(), " 
-                    + "when doing ValueState.value()");
+            e.printStackTrace();
         }
 
         if (cur == k + 9) {
             try {
                 count.update(cur + 1L);
             } catch (IOException e) {
-                System.out.println("Caught IOException in " 
-                        + "StreamingKmeans.map(), " 
-                        + "when doing ValueState.update");
+                e.printStackTrace();
             }
 
             try {
+                filter.put(cur, new AtomicLong());
                 centroids.add(element);
             } catch (Exception e) {
-                System.out.println("Caught Exception in " 
-                        + "StreamingKmeans.map(), " 
-                        + "when doing ListState.add()");
+                e.printStackTrace();
             }
 
             PriorityQueue<Double> heap 
@@ -89,13 +83,9 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
                     elementsList.add(ele);
                 }
             } catch (IOException e) {
-                System.out.println("Caught IOException in " 
-                        + "StreamingKmeans.map(), " 
-                        + "when doing ListState.add()");
+                e.printStackTrace();
             } catch (Exception e) {
-                System.out.println("Caught IOException in " 
-                        + "StreamingKmeans.map(), " 
-                        + "when doing ListState.add()");
+                e.printStackTrace();
             }
 
             Collection<Double> allValues = 
@@ -115,49 +105,41 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
             try {
                 f.update(sum / 2);
             } catch (IOException e) {
-                System.out.println("Caught IOException in " 
-                        + "StreamingKmeans.map(), " 
-                        + "when doing ValueState.update()");
+                e.printStackTrace();
             }
             return (int) cur + 1;
         } else if (cur < k + 9) {
             try {
                 count.update(cur + 1L);
             } catch (IOException e) {
-                System.out.println("Caught IOException in " 
-                        + "StreamingKmeans.map(), " 
-                        + "when doing ValueState.update");
+                e.printStackTrace();
             }
 
             try {
                 centroids.add(element);
+                filter.put(cur, new AtomicLong());
             } catch (Exception e) {
-                System.out.println("Caught Exception in " 
-                        + "StreamingKmeans.map(), " 
-                        + "when doing ListState.add()");
+                e.printStackTrace();
             }
             return (int) cur + 1;
         } else {
             double p = Double.POSITIVE_INFINITY;
-
+            long size = 1;
             try {
                 for (Element temp: centroids.get()) {
+                    size++;
                     double prob = temp.distance(element);
                     p = p < prob?p:prob;
                 }
             } catch (Exception e) {
-                System.out.println("Caught Exception in " 
-                        + "StreamingKmeans.map(), " 
-                        + "when doing ListState.get()");
+                e.printStackTrace();
             }
 
             double curf = 0;
             try {
                 curf = f.value();
             } catch (IOException e) {
-                System.out.println("Caught Exception in " 
-                        + "StreamingKmeans.map(), " 
-                        + "when doing ValueState.value()");
+                e.printStackTrace();
             }
             p = p * p / curf;
             p = p < 1?p:1;
@@ -166,34 +148,27 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
             if (rand.nextDouble() <= p) {
                 try {
                     centroids.add(element);
+                    filter.put(size, new AtomicLong());
                 } catch (Exception e) {
-                    System.out.println("Caught Exception in " 
-                            + "StreamingKmeans.map(), " 
-                            + "when doing ListState.add()");
+                    e.printStackTrace();
                 }
                 try {
                     curq = q.value();
                 } catch (IOException e) {
-                    System.out.println("Caught Exception in " 
-                            + "StreamingKmeans.map(), " 
-                            + "when doing ValueState.value()");
+                    e.printStackTrace();
                 }
 
                 try {
                     q.update(curq + 1L);
                 } catch (IOException e) {
-                    System.out.println("Caught Exception in " 
-                            + "StreamingKmeans.map(), " 
-                            + "when doing ValueState.update()");
+                    e.printStackTrace();
                 }
             }
 
             try {
                 curq = q.value();
             } catch (IOException e) {
-                System.out.println("Caught Exception in " 
-                        + "StreamingKmeans.map(), " 
-                        + "when doing ValueState.value()");
+                e.printStackTrace();
             }
 
             if (curq >= k) {
@@ -202,9 +177,7 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
                     curf = f.value();
                     f.update(curf * 10);
                 } catch (IOException e) {
-                    System.out.println("Caught Exception in " 
-                            + "StreamingKmeans.map(), " 
-                            + "when doing ValueState.update()");
+                    e.printStackTrace();
                 }
             }
 
@@ -220,10 +193,9 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
                     }
                     pos++;
                 }
+                filter.get((long)pos).incrementAndGet();
             } catch (Exception e) {
-                System.out.println("Caught Exception in " 
-                        + "StreamingKmeans.map(), " 
-                        + "when doing ValueState.update()");
+                e.printStackTrace();
             }
             return classify;
         }
