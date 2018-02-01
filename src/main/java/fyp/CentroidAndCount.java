@@ -25,8 +25,12 @@ public class CentroidAndCount {
     @Override
     public String toString() {
         String ans = "";
-        for (Entry<Long, AtomicLong> elem: counts) {
-            ans += elem.getKey() + "," + elem.getValue().get() + ";";
+        Iterator<Element> eit = centroids.iterator();
+        Iterator<Entry<Long, AtomicLong>> cit = counts.iterator();
+        while (eit.hasNext() && cit.hasNext()) {
+            Entry<Long, AtomicLong> temp = cit.next();
+            ans += eit.next().toString();
+            ans += "[" + temp.getKey() + "," + temp.getValue().get() + "]";
         }
         return ans;
     }

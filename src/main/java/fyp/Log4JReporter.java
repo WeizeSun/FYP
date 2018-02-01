@@ -13,6 +13,11 @@ import org.slf4j.LoggerFactory;
 import java.util.Map.Entry;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.PriorityQueue;
+import java.util.Comparator;
+
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -59,9 +64,34 @@ public class Log4JReporter implements MetricReporter, Scheduled {
         log.info("#######Starting Metric Report, Time = {}#######",
                 System.currentTimeMillis());
         for (Entry<Gauge<?>, String> entry: gauges.entrySet()) {
-            log.info("{}: {}", entry.getValue(), 
-                    entry.getKey().getValue().toString());
+            String gaugeName = entry.getValue();
+            String content = entry.getKey().getValue().toString();
+            if (gaugeName.endsWith("kms")) {
+                Pattern p = Pattern.compile("\\[(.*?)\\]\\[(.*?)\\]");
+                Matcher m = p.matcher(content);
+                while (m.find()) {
+                    String rawe = m.group(1);
+                    String rawc = m.group(2);
+                }
+            } else {
+                log.info("{}: {}", gaugeName, content);
+            }
         }
         log.info("#######Finished Metric Report#######");
+    }
+
+    private static class ElementWithCount {
+        private final Element element;
+        private final long count;
+        public ElementWithCount(Element element, long count) {
+            this.element = element;
+            this.count = count;
+        }
+        public Element getElement() {
+            return this.element;
+        }
+        public long getCount() {
+            return this.count;
+        }
     }
 }

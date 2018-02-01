@@ -184,7 +184,7 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
             int classify = -1;
             double minDistance = Double.POSITIVE_INFINITY;
             try {
-                int pos = 1;
+                int pos = 0;
                 for (Element temp: centroids.get()) {
                     double dist = element.distance(temp);
                     if (dist < minDistance) {
@@ -193,8 +193,7 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
                     }
                     pos++;
                 }
-                // filter.get((long)pos).incrementAndGet();
-                filter.get((long)pos).set(333);
+                filter.get((long)classify).incrementAndGet();
             } catch (Exception e) {
                 e.printStackTrace();
             }
