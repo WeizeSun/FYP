@@ -74,8 +74,8 @@ public class Log4JReporter implements MetricReporter, Scheduled {
                             new Comparator<ElementWithCount>() {
                                 public int compare(ElementWithCount ec1, 
                                         ElementWithCount ec2) {
-                                    return (int)(ec2.getCount() 
-                                            - ec1.getCount());
+                                    return (int)(ec1.getCount() 
+                                            - ec2.getCount());
                                 }
                             });
                 Pattern p = Pattern.compile("\\[(.*?)\\]\\[(.*?)\\]");
@@ -97,6 +97,7 @@ public class Log4JReporter implements MetricReporter, Scheduled {
                     }
                 }
                 Element[] centroids = new Element[initSize];
+                long[] counts = new long[initSize];
                 for (int i = 0; i < centroids.length; i++) {
                     centroids[i] = heap.poll().getElement();
                 }
