@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.PriorityQueue;
 import java.util.Comparator;
+import java.util.Scanner;
 
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
@@ -67,12 +68,39 @@ public class Log4JReporter implements MetricReporter, Scheduled {
             String gaugeName = entry.getValue();
             String content = entry.getKey().getValue().toString();
             if (gaugeName.endsWith("kms")) {
+                int initSize = 50;
+                PriorityQueue<ElementWithCount> heap 
+                    = new PriorityQueue<ElementWithCount>(initSize, 
+                            new Comparator<ElementWithCount>() {
+                                public int compare(ElementWithCount ec1, 
+                                        ElementWithCount ec2) {
+                                    return (int)(ec2.getCount() 
+                                            - ec1.getCount());
+                                }
+                            });
                 Pattern p = Pattern.compile("\\[(.*?)\\]\\[(.*?)\\]");
                 Matcher m = p.matcher(content);
                 while (m.find()) {
                     String rawe = m.group(1);
                     String rawc = m.group(2);
+                    String[] rawFeatures = rawe.split(",");
+                    double[] features = new double[rawFeatures.length];
+                    for (int i = 0; i < features.length; i++) {
+                        features[i] 
+                            = Double.parseDouble(rawFeatures[i].trim());
+                    }
+                    Element centroid = new Element(features);
+                    long count = Long.parseLong(rawc.split(",")[1]);
+                    heap.offer(new ElementWithCount(centroid, count));
+                    if (heap.size() > initSize) {
+                        heap.poll();
+                    }
                 }
+                Element[] centroids = new Element[initSize];
+                for (int i = 0; i < centroids.length; i++) {
+                    centroids[i] = heap.poll().getElement();
+                }
+                log.info("{}: {}", gaugeName, centroids);
             } else {
                 log.info("{}: {}", gaugeName, content);
             }
