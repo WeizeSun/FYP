@@ -99,7 +99,9 @@ public class Log4JReporter implements MetricReporter, Scheduled {
                 Element[] centroids = new Element[initSize];
                 long[] counts = new long[initSize];
                 for (int i = 0; i < centroids.length; i++) {
-                    centroids[i] = heap.poll().getElement();
+                    ElementWithCount ec = heap.poll();
+                    centroids[i] = ec.getElement();
+                    counts[i] = ec.getCount();
                 }
                 log.info("{}: {}", gaugeName, centroids);
             } else {
