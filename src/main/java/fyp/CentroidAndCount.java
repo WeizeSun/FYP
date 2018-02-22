@@ -6,10 +6,10 @@ import java.util.Iterator;
 
 public class CentroidAndCount {
     private Iterable<Element> centroids;
-    private Iterable<Entry<Long, AtomicLong>> counts;
+    private Iterable<Entry<Integer, AtomicLong>> counts;
 
     public CentroidAndCount(Iterable<Element> centroids, 
-            Iterable<Entry<Long, AtomicLong>> counts) {
+            Iterable<Entry<Integer, AtomicLong>> counts) {
         this.centroids = centroids;
         this.counts = counts;
     }
@@ -18,7 +18,7 @@ public class CentroidAndCount {
         return this.centroids;
     }
 
-    public Iterable<Entry<Long, AtomicLong>> getCounts() {
+    public Iterable<Entry<Integer, AtomicLong>> getCounts() {
         return this.counts;
     }
 
@@ -26,9 +26,9 @@ public class CentroidAndCount {
     public String toString() {
         String ans = "";
         Iterator<Element> eit = centroids.iterator();
-        Iterator<Entry<Long, AtomicLong>> cit = counts.iterator();
+        Iterator<Entry<Integer, AtomicLong>> cit = counts.iterator();
         while (eit.hasNext() && cit.hasNext()) {
-            Entry<Long, AtomicLong> temp = cit.next();
+            Entry<Integer, AtomicLong> temp = cit.next();
             ans += eit.next().toString();
             ans += "[" + temp.getKey() + "," + temp.getValue().get() + "]";
         }

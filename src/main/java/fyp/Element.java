@@ -18,6 +18,11 @@ public class Element {
         return Arrays.toString(features);
     }
 
+    @Override
+    public int hashCode() {
+        return features.hashCode();
+    }
+
     public Element(double[] array) {
         this.size = array.length;
         this.length = array.length;

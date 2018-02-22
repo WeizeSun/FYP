@@ -26,27 +26,30 @@ import java.io.IOException;
 public class StreamingKmeans extends 
 RichMapFunction<Tuple2<Integer, Element>, Integer> {
 
-    private ListState<Element> centroids;
+    // private ListState<Element> centroids;
     private ValueState<Double> f;
     private ValueState<Long> count;
     private ValueState<Long> q;
-    private MapState<Long, AtomicLong> filter;
+    private MapState<Integer, AtomicLong> filter;
+    private MapState<Integer, Element> centroids;
 
     private final Random rand = new Random();
     private final int k;
     private final int kTarget;
+    private final int snapshotPeriod;
+    private final String snapshotDirectory;
 
     private class KMGauge implements Gauge<CentroidAndCount> {
         @Override
         public CentroidAndCount getValue() {
             try {
-                return new CentroidAndCount(centroids.get()
+                return new CentroidAndCount(centroids.values()
                         , filter.entries());
             } catch (Exception e) {
                 e.printStackTrace();
             }
             return new CentroidAndCount(new LinkedList<Element>(), 
-                    new LinkedList<Entry<Long, AtomicLong>>());
+                    new LinkedList<Entry<Integer, AtomicLong>>());
         }
     }
 
@@ -69,8 +72,9 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
             }
 
             try {
-                filter.put(cur, new AtomicLong(1));
-                centroids.add(element);
+                filter.put(element.hashCode(), new AtomicLong(1));
+                // centroids.add(element);
+                centroids.put(element.hashCode(), element);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -79,7 +83,7 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
                 = new PriorityQueue<Double>(10, Collections.reverseOrder());
             LinkedList<Element> elementsList = new LinkedList<Element>();
             try {
-                for (Element ele: centroids.get()) {
+                for (Element ele: centroids.values()) {
                     elementsList.add(ele);
                 }
             } catch (IOException e) {
@@ -116,8 +120,9 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
             }
 
             try {
-                centroids.add(element);
-                filter.put(cur, new AtomicLong(1));
+                // centroids.add(element);
+                centroids.put(element.hashCode(), element);
+                filter.put(element.hashCode(), new AtomicLong(1));
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -126,7 +131,7 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
             double p = Double.POSITIVE_INFINITY;
             long size = 1;
             try {
-                for (Element temp: centroids.get()) {
+                for (Element temp: centroids.values()) {
                     size++;
                     double prob = temp.distance(element);
                     p = p < prob?p:prob;
@@ -147,8 +152,9 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
             long curq = 0;
             if (rand.nextDouble() <= p) {
                 try {
-                    centroids.add(element);
-                    filter.put(size, new AtomicLong(1));
+                    // centroids.add(element);
+                    centroids.put(element.hashCode(), element);
+                    filter.put(element.hashCode(), new AtomicLong(1));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -181,23 +187,21 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
                 }
             }
 
-            int classify = -1;
+            Element classify = null;
             double minDistance = Double.POSITIVE_INFINITY;
             try {
-                int pos = 0;
-                for (Element temp: centroids.get()) {
+                for (Element temp: centroids.values()) {
                     double dist = element.distance(temp);
                     if (dist < minDistance) {
-                        classify = pos;
+                        classify = temp;
                         minDistance = dist;
                     }
-                    pos++;
                 }
-                filter.get((long)classify).incrementAndGet();
+                filter.get(classify.hashCode()).incrementAndGet();
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            return classify;
+            return element.hashCode();
         }
     }
 
@@ -206,14 +210,25 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
             .getMetricGroup()
             .gauge("kms", new KMGauge());
 
+        /*
         this.centroids = getRuntimeContext()
             .getListState(new ListStateDescriptor<>
                     ("centroids", Element.class));
 
-        MapStateDescriptor<Long, AtomicLong> filterDescriptor 
+        */
+
+        MapStateDescriptor<Integer, Element> centroidsDescriptor
+            = new MapStateDescriptor<>(
+                    "centroids",
+                    TypeInformation.of(new TypeHint<Integer>() {}),
+                    TypeInformation.of(new TypeHint<Element>() {}));
+        this.centroids 
+            = getRuntimeContext().getMapState(centroidsDescriptor);
+
+        MapStateDescriptor<Integer, AtomicLong> filterDescriptor 
             = new MapStateDescriptor<>(
                     "filter",
-                    TypeInformation.of(new TypeHint<Long>() {}),
+                    TypeInformation.of(new TypeHint<Integer>() {}),
                     TypeInformation.of(new TypeHint<AtomicLong>() {}));
         this.filter = getRuntimeContext().getMapState(filterDescriptor);
 
@@ -239,7 +254,8 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
         this.q = getRuntimeContext().getState(qDescriptor);
     }
 
-    public StreamingKmeans(int k) {
+    public StreamingKmeans(int k, int snapshotPeriod, 
+            String snapshotDirectory) {
         if (k < 16) {
             System.out.println("Warning: the k value is too small, " + 
                     "will be automatically set to 16");
@@ -248,5 +264,7 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
             this.k = k;
         }
         this.kTarget = (k - 11) / 5;
+        this.snapshotPeriod = snapshotPeriod;
+        this.snapshotDirectory = snapshotDirectory;
     }
 }
