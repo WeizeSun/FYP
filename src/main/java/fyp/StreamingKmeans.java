@@ -23,7 +23,7 @@ import java.util.Map.Entry;
 
 import java.io.IOException;
 
-public class StreamingKmeans extends 
+public class StreamingKmeans extends
 RichMapFunction<Tuple2<Integer, Element>, Integer> {
 
     // private ListState<Element> centroids;
@@ -48,7 +48,7 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            return new CentroidAndCount(new LinkedList<Element>(), 
+            return new CentroidAndCount(new LinkedList<Element>(),
                     new LinkedList<Entry<Integer, AtomicLong>>());
         }
     }
@@ -79,7 +79,7 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
                 e.printStackTrace();
             }
 
-            PriorityQueue<Double> heap 
+            PriorityQueue<Double> heap
                 = new PriorityQueue<Double>(10, Collections.reverseOrder());
             LinkedList<Element> elementsList = new LinkedList<Element>();
             try {
@@ -92,7 +92,7 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
                 e.printStackTrace();
             }
 
-            Collection<Double> allValues = 
+            Collection<Double> allValues =
                 Element.allDistancesInSet(elementsList);
             for (double temp: allValues) {
                 heap.add(temp);
@@ -222,42 +222,42 @@ RichMapFunction<Tuple2<Integer, Element>, Integer> {
                     "centroids",
                     TypeInformation.of(new TypeHint<Integer>() {}),
                     TypeInformation.of(new TypeHint<Element>() {}));
-        this.centroids 
+        this.centroids
             = getRuntimeContext().getMapState(centroidsDescriptor);
 
-        MapStateDescriptor<Integer, AtomicLong> filterDescriptor 
+        MapStateDescriptor<Integer, AtomicLong> filterDescriptor
             = new MapStateDescriptor<>(
                     "filter",
                     TypeInformation.of(new TypeHint<Integer>() {}),
                     TypeInformation.of(new TypeHint<AtomicLong>() {}));
         this.filter = getRuntimeContext().getMapState(filterDescriptor);
 
-        ValueStateDescriptor<Long> countDescriptor 
+        ValueStateDescriptor<Long> countDescriptor
             = new ValueStateDescriptor<>(
-                    "count", 
+                    "count",
                     TypeInformation.of(new TypeHint<Long>() {}),
                     0L);
         this.count = getRuntimeContext().getState(countDescriptor);
 
-        ValueStateDescriptor<Double> fDescriptor 
+        ValueStateDescriptor<Double> fDescriptor
             = new ValueStateDescriptor<>(
-                    "f", 
+                    "f",
                     TypeInformation.of(new TypeHint<Double>() {}),
                     0.0);
         this.f = getRuntimeContext().getState(fDescriptor);
 
-        ValueStateDescriptor<Long> qDescriptor 
+        ValueStateDescriptor<Long> qDescriptor
             = new ValueStateDescriptor<>(
-                    "q", 
+                    "q",
                     TypeInformation.of(new TypeHint<Long>() {}),
                     0L);
         this.q = getRuntimeContext().getState(qDescriptor);
     }
 
-    public StreamingKmeans(int k, int snapshotPeriod, 
+    public StreamingKmeans(int k, int snapshotPeriod,
             String snapshotDirectory) {
         if (k < 16) {
-            System.out.println("Warning: the k value is too small, " + 
+            System.out.println("Warning: the k value is too small, " +
                     "will be automatically set to 16");
             this.k = 16;
         } else {

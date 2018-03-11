@@ -29,15 +29,15 @@ public class Test {
         if (args.length >= 6) {
             snapshotDirectory = args[5];
         }
-        final StreamExecutionEnvironment env 
+        final StreamExecutionEnvironment env
             = StreamExecutionEnvironment.getExecutionEnvironment();
-        DataStream<String> source 
+        DataStream<String> source
             = env.readTextFile(inputPath).uid("kmean");
-        DataStream<Tuple2<Integer, Element>> parsed 
+        DataStream<Tuple2<Integer, Element>> parsed
             = source.map(new Preprocess()).keyBy(0);
         DataStream<Integer> result
             = parsed
-                .map(new StreamingKmeans(k, 
+                .map(new StreamingKmeans(k,
                             snapshotPeriod, snapshotDirectory))
                 .setParallelism(parallelism);
         result.writeAsText(outputPath);
