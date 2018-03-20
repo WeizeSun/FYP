@@ -21,28 +21,20 @@ public class Test2 {
   public static void main(String[] args)throws Exception {
     final StreamExecutionEnvironment env
       = StreamExecutionEnvironment.getExecutionEnvironment();
-    DataStream<Long> someIntegers = env.generateSequence(0, 1000);
-    DataStream<Tuple2<Integer, Long>> tuples = someIntegers.flatMap(new FlatMapFunction<Long, Tuple2<Integer, Long>>() {
+    DataStream<Long> someIntegers = env.generateSequence(0, 100000);
+    DataStream<Long> tuples = someIntegers.map(new MapFunction<Long, Long>() {
       @Override
-      public void flatMap(Long value, Collector<Tuple2<Integer, Long>> out) throws Exception {
-        for (int i = 0; i < 3; i++) {
-          out.collect(new Tuple2<Integer, Long>(i, value));
-        }
+      public Long map(Long value) throws Exception {
+        return value;
       }
-    });
-    DataStream<Tuple2<Integer, Long>> output = tuples.map(new MapFunction<Tuple2<Integer, Long>, Tuple2<Integer, Long>>() {
+    }).broadcast();
+    DataStream<Long> output = tuples.map(new MapFunction<Long, Long>() {
       @Override
-      public Tuple2<Integer, Long> map(Tuple2<Integer, Long> tuple) throws Exception {
+      public Long map(Long tuple) throws Exception {
         return tuple;
       }
     }).setParallelism(3);
-    DataStream<Long> result = output.map(new MapFunction<Tuple2<Integer, Long>, Long>() {
-      @Override
-      public Long map(Tuple2<Integer, Long> tuple) throws Exception {
-        return tuple.f1;
-      }
-    });
-    result.writeAsText("/home/weizesun/fuck.txt");
+    output.writeAsText("/home/weizesun/fuck.txt");
     env.execute("Test2");
   }
 }
