@@ -1,6 +1,5 @@
 package fyp;
 
-import org.apache.flink.metrics.*;
 import org.apache.flink.streaming.api.datastream.*;
 import org.apache.flink.streaming.api.environment.*;
 import org.apache.flink.streaming.api.checkpoint.*;
@@ -22,16 +21,11 @@ public class StreamingKCluster {
   private int kTarget = 50;
 
   private static class Parser implements
-    MapFunction<String, Tuple3<Long, Element, Double>> {
+    MapFunction<Element, Tuple3<Long, Element, Double>> {
       @Override
-      public Tuple3<Long, Element, Double> map(String line) throws Exception {
-        String[] stringArray = line.split(",");
-        double[] doubleArray = new double[stringArray.length];
-        for (int i = 0; i < stringArray.length; i++) {
-          doubleArray[i] = Double.parseDouble(stringArray[i]);
-        }
+      public Tuple3<Long, Element, Double> map(Element elem) throws Exception {
         // 0 for ordinary element while positive for feedback centroids.
-        return new Tuple3(0L, new Element(doubleArray), 0.0);
+        return new Tuple3(0L, elem, 0.0);
       }
   }
 
@@ -312,13 +306,8 @@ public class StreamingKCluster {
     this.kTarget = kTarget;
   }
 
-  public static void main(String[] args) throws Exception {
-    String inputPath = args[0], outputPath = args[1];
-    int parallelism = 1, kTarget = 50;
-    final StreamExecutionEnvironment env
-      = StreamExecutionEnvironment.getExecutionEnvironment();
-
-    DataStream<String> source = env.readTextFile(inputPath);
+  public DataStream<Tuple2<Long, Element>> getStream(
+    DataStream<Element> source) throws Exception {
 
     IterativeStream<Tuple3<Long, Element, Double>> parsed
       = source.map(new Parser()).iterate();
@@ -347,7 +336,6 @@ public class StreamingKCluster {
       = secondRoundElements.map(new RealPointsToResult())
       .union(firstRoundElements);
 
-    result.writeAsText("/home/weizesun/output.txt");
-    env.execute("StreamingKCluster");
+    return result;
   }
 }
