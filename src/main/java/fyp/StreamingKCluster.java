@@ -19,7 +19,7 @@ import java.util.Map.*;
 import java.io.*;
 
 public class StreamingKCluster {
-  private int kTarget = 30;
+  private int kTarget = 50;
 
   private static class Parser implements
     MapFunction<String, Tuple3<Long, Element, Double>> {
@@ -31,13 +31,14 @@ public class StreamingKCluster {
           doubleArray[i] = Double.parseDouble(stringArray[i]);
         }
         // 0 for ordinary element while positive for feedback centroids.
-        return new Tuple3(0L, new Element(doubleArray), null);
+        return new Tuple3(0L, new Element(doubleArray), 0.0);
       }
   }
 
   private static class ClassifyFunction
     extends RichFlatMapFunction<Tuple3<Long, Element, Double>, Tuple2<Long, Element>>
     implements CheckpointedFunction {
+
     private ListState<Tuple2<Long, Element>> centroidsState;
     private ListState<Double> fState;
 
@@ -95,6 +96,7 @@ public class StreamingKCluster {
     public void flatMap(Tuple3<Long, Element, Double> tuple,
       Collector<Tuple2<Long, Element>> out) throws Exception {
       Element element = tuple.f1;
+
       if (tuple.f0 > 0) {
         centroids.put(tuple.f0, element);
         f = tuple.f2;
@@ -103,7 +105,7 @@ public class StreamingKCluster {
 
       if (f < 0) {
         // 0 for candidates while positive number for classified
-        out.collect(new Tuple2(0, element));
+        out.collect(new Tuple2(0L, element));
         return;
       }
 
@@ -116,8 +118,8 @@ public class StreamingKCluster {
           minDistance = dist;
         }
       }
-      if (Math.min(minDistance * minDistance / f, 1) >= rand.nextDouble()) {
-        out.collect(new Tuple2(0, element));
+      if (Math.sqrt(Math.min(minDistance * minDistance / f, 1)) >= rand.nextDouble()) {
+        out.collect(new Tuple2(0L, element));
       } else {
         out.collect(new Tuple2(cluster, element));
       }
@@ -128,7 +130,7 @@ public class StreamingKCluster {
     implements FilterFunction<Tuple2<Long, Element>> {
     @Override
     public boolean filter(Tuple2<Long, Element> tuple) throws Exception {
-      return tuple.f0 > 0;
+      return (tuple.f0 > 0);
     }
   }
 
@@ -136,7 +138,7 @@ public class StreamingKCluster {
     implements FilterFunction<Tuple2<Long, Element>> {
     @Override
     public boolean filter(Tuple2<Long, Element> tuple) throws Exception {
-      return tuple.f0 > 0;
+      return (tuple.f0 == 0L);
     }
   }
 
@@ -149,7 +151,7 @@ public class StreamingKCluster {
     private ListState<Element> centroidsState;
 
     private double f = 0.0;
-    private long q = 0;
+    private long q = 0L;
     private List<Element> centroids = new LinkedList<Element>();
 
     private final Random rand = new Random();
@@ -225,7 +227,7 @@ public class StreamingKCluster {
       Element element = tuple.f1;
       if (centroids.size() < k + 10) {
         centroids.add(element);
-        return new Tuple3(centroids.size(), element, f);
+        return new Tuple3((long)centroids.size(), element, f);
       }
       if (!initialized && centroids.size() == k + 10) {
         initialized = true;
@@ -259,28 +261,26 @@ public class StreamingKCluster {
         }
         cur++;
       }
-      if (Math.min(minDistance * minDistance / f, 1)
-        >= rand.nextDouble()) {
+      if (Math.sqrt(Math.min(minDistance * minDistance / f, 1)) >= rand.nextDouble()) {
           centroids.add(element);
-          if (q + 1 >= k) {
+          q += 1;
+          if (q >= k) {
             q = 0;
             f *= 10;
-          } else {
-            q += 1;
           }
-          return new Tuple3(centroids.size(), element, f);
+          return new Tuple3((long)centroids.size(), element, f);
       } else {
         return new Tuple3(cluster, element, -f);
       }
     }
+  }
 
-    public static class NewCentroids
-      implements FilterFunction<Tuple3<Long, Element, Double>> {
-      @Override
-      public boolean filter(Tuple3<Long, Element, Double> tuple)
-        throws Exception {
-        return tuple.f2 > 0;
-      }
+  public static class NewCentroids
+    implements FilterFunction<Tuple3<Long, Element, Double>> {
+    @Override
+    public boolean filter(Tuple3<Long, Element, Double> tuple)
+      throws Exception {
+      return tuple.f2 > 0;
     }
   }
 
@@ -289,7 +289,7 @@ public class StreamingKCluster {
     @Override
     public boolean filter(Tuple3<Long, Element, Double> tuple)
       throws Exception {
-      return tuple.f2 <= 0;
+      return (tuple.f2 <= 0);
     }
   }
 
@@ -310,5 +310,44 @@ public class StreamingKCluster {
         kTarget = 16;
     }
     this.kTarget = kTarget;
+  }
+
+  public static void main(String[] args) throws Exception {
+    String inputPath = args[0], outputPath = args[1];
+    int parallelism = 1, kTarget = 50;
+    final StreamExecutionEnvironment env
+      = StreamExecutionEnvironment.getExecutionEnvironment();
+
+    DataStream<String> source = env.readTextFile(inputPath);
+
+    IterativeStream<Tuple3<Long, Element, Double>> parsed
+      = source.map(new Parser()).iterate();
+
+    DataStream<Tuple2<Long, Element>> firstRoundCheck
+      = parsed.flatMap(new ClassifyFunction()).setParallelism(3);
+
+    DataStream<Tuple2<Long, Element>> firstRoundElements
+      = firstRoundCheck.filter(new ClassifiedFilter());
+
+    DataStream<Tuple2<Long, Element>> firstRoundCentroids
+      = firstRoundCheck.filter(new CandidatesFilter());
+
+    DataStream<Tuple3<Long, Element, Double>> secondRoundCheck
+      = firstRoundCentroids.map(new CentroidsGenerator(kTarget));
+
+    DataStream<Tuple3<Long, Element, Double>> secondRoundElements
+      = secondRoundCheck.filter(new RealPoints());
+
+    DataStream<Tuple3<Long, Element, Double>> secondRoundCentroids
+      = secondRoundCheck.filter(new NewCentroids()).broadcast();
+
+    parsed.closeWith(secondRoundCentroids);
+
+    DataStream<Tuple2<Long, Element>> result
+      = secondRoundElements.map(new RealPointsToResult())
+      .union(firstRoundElements);
+
+    result.writeAsText("/home/weizesun/output.txt");
+    env.execute("StreamingKCluster");
   }
 }
