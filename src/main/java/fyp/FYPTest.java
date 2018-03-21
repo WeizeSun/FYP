@@ -27,7 +27,7 @@ public class FYPTest {
     DataStream<Tuple2<Long, Element>> result
       = new StreamingKCluster(50).getStream(source);
 
-    result.writeAsText("/home/weizesun/output.txt");
+    result.writeAsText("/home/weizesun/sc/output.txt");
     env.execute("FYPTest");
   }
 }
